@@ -77,13 +77,13 @@ pub fn run() {
                         "Quit".into(),
                     ))
                     .show(move |open_website| {
-                        if open_website {
-                            if let Err(error) = tauri_plugin_opener::open_url(
+                        if open_website
+                            && let Err(error) = tauri_plugin_opener::open_url(
                                 "https://deepseek.com/harness/",
                                 None::<&str>,
-                            ) {
-                                eprintln!("Failed to open DeepSeek Harness website: {error}");
-                            }
+                            )
+                        {
+                            eprintln!("Failed to open DeepSeek Harness website: {error}");
                         }
 
                         app_handle.exit(0);
@@ -123,10 +123,10 @@ pub fn run() {
     // 因此允许真正退出。
     //
     let exit_code = app.run_return(|_, event| {
-        if let tauri::RunEvent::ExitRequested { api, code, .. } = event {
-            if code.is_none() {
-                api.prevent_exit();
-            }
+        if let tauri::RunEvent::ExitRequested { api, code, .. } = event
+            && code.is_none()
+        {
+            api.prevent_exit();
         }
     });
 
