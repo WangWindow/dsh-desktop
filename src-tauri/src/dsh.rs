@@ -35,7 +35,7 @@ pub fn start() -> io::Result<Server> {
     println!("Starting DSH Web...");
 
     let mut child = Command::new("dsh")
-        .args(["web", "--port", "0"])
+        .args(["web", "--no-open", "--port", "0"])
         .stdout(Stdio::piped())
         .spawn()?;
     let stdout = child
