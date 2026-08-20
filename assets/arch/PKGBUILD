@@ -6,8 +6,7 @@ arch=('x86_64')
 options=('!debug')
 url='https://deepseek.com/harness/'
 license=('MIT')
-depends=('webkit2gtk-4.1' 'gtk3' 'librsvg' 'libayatana-appindicator')
-optdepends=('dsh: DeepSeek Harness command-line tool')
+depends=('webkit2gtk-4.1' 'libayatana-appindicator')
 source=('dsh-desktop' 'dsh-desktop.desktop' 'icon.png')
 sha256sums=('SKIP' 'SKIP' 'SKIP')
 
