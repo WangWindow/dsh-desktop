@@ -10,8 +10,8 @@ permissions:
   contents: write
 
 jobs:
-  build-linux:
-    name: Build Linux AppImage
+  build-deb:
+    name: Build Linux DEB package
     runs-on: ubuntu-22.04
 
     steps:
@@ -24,9 +24,7 @@ jobs:
           sudo apt-get install -y \
             libwebkit2gtk-4.1-dev \
             libappindicator3-dev \
-            librsvg2-dev \
-            patchelf \
-            xdg-utils
+            librsvg2-dev
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -44,18 +42,68 @@ jobs:
       - name: Install JavaScript dependencies
         run: bun install
 
-      - name: Build AppImage
-        run: bun tauri build --ci --bundles appimage
+      - name: Build Debian package
+        run: bun tauri build --ci --bundles deb
 
-      - name: Upload AppImage
+      - name: Upload Debian package
         uses: actions/upload-artifact@v4
         with:
-          name: dsh-desktop-linux-appimage
-          path: src-tauri/target/release/bundle/appimage/*.AppImage
+          name: dsh-desktop-linux-deb
+          path: src-tauri/target/release/bundle/deb/*.deb
+          if-no-files-found: error
+
+  build-pacman:
+    name: Build Arch Linux pacman package
+    runs-on: ubuntu-22.04
+    container: archlinux:base-devel
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          pacman -Syu --noconfirm --needed \
+            bun \
+            rust \
+            webkit2gtk-4.1 \
+            libayatana-appindicator \
+            librsvg
+
+      - name: Install JavaScript dependencies
+        run: bun install
+
+      - name: Build executable
+        run: bun tauri build --ci --no-bundle
+
+      - name: Prepare pacman package
+        run: |
+          rm -rf pacman-build
+          mkdir -p pacman-build
+          cp assets/arch/PKGBUILD assets/arch/dsh-desktop.desktop pacman-build/
+          cp src-tauri/icons/icon.png pacman-build/
+          cp src-tauri/target/release/dsh-desktop pacman-build/
+          VERSION=$(bun -e "console.log(JSON.parse(await Bun.file('src-tauri/tauri.conf.json').text()).version)")
+          sed -i "s/^pkgver=.*/pkgver=${VERSION}/" pacman-build/PKGBUILD
+
+      - name: Build pacman package
+        run: |
+          useradd --create-home builder
+          chown -R builder:builder pacman-build
+          su builder -c 'cd pacman-build && makepkg --nodeps --skipinteg'
+
+      - name: Upload pacman package
+        uses: actions/upload-artifact@v4
+        with:
+          name: dsh-desktop-linux-pacman
+          path: pacman-build/*.pkg.tar.zst
           if-no-files-found: error
 
   build-windows:
-    name: Build Windows executable
+    name: Build Windows MSI and executable
     runs-on: windows-latest
 
     steps:
@@ -78,8 +126,8 @@ jobs:
       - name: Install JavaScript dependencies
         run: bun install
 
-      - name: Build portable executable
-        run: bun tauri build --ci --no-bundle
+      - name: Build MSI installer
+        run: bun tauri build --ci --bundles msi
 
       - name: Upload portable executable
         uses: actions/upload-artifact@v4
@@ -88,11 +136,19 @@ jobs:
           path: src-tauri/target/release/dsh-desktop.exe
           if-no-files-found: error
 
+      - name: Upload MSI installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: dsh-desktop-windows-msi
+          path: src-tauri/target/release/bundle/msi/*.msi
+          if-no-files-found: error
+
   release:
     name: Publish GitHub Release
     if: startsWith(github.ref, 'refs/tags/v')
     needs:
-      - build-linux
+      - build-deb
+      - build-pacman
       - build-windows
     runs-on: ubuntu-latest
 

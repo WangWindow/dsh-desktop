@@ -1,0 +1,21 @@
+pkgname=dsh-desktop
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='Desktop tray application for DeepSeek Harness'
+arch=('x86_64')
+options=('!debug')
+url='https://deepseek.com/harness/'
+license=('MIT')
+depends=('webkit2gtk-4.1' 'gtk3' 'librsvg' 'libayatana-appindicator')
+optdepends=('dsh: DeepSeek Harness command-line tool')
+source=('dsh-desktop' 'dsh-desktop.desktop' 'icon.png')
+sha256sums=('SKIP' 'SKIP' 'SKIP')
+
+package() {
+  install -Dm755 "$srcdir/dsh-desktop" \
+    "$pkgdir/usr/bin/dsh-desktop"
+  install -Dm644 "$srcdir/dsh-desktop.desktop" \
+    "$pkgdir/usr/share/applications/dsh-desktop.desktop"
+  install -Dm644 "$srcdir/icon.png" \
+    "$pkgdir/usr/share/icons/hicolor/512x512/apps/dsh-desktop.png"
+}

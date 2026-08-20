@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=DSH Desktop
+Comment=Desktop tray application for DeepSeek Harness
+Exec=dsh-desktop
+Icon=dsh-desktop
+Terminal=false
+Type=Application
+Categories=Development;
