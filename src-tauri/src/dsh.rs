@@ -1,14 +1,18 @@
 use std::{
     io,
-    net::{SocketAddr, TcpStream},
+    io::{BufRead, BufReader},
     process::{Child, Command, Stdio},
+    sync::mpsc,
     thread,
     time::{Duration, Instant},
 };
 
-const DSH_PORT: u16 = 3080;
+use tauri::Url;
 
-pub const DSH_URL: &str = "http://127.0.0.1:3080";
+pub struct Server {
+    pub child: Child,
+    pub url: Url,
+}
 
 /// 检查当前桌面应用环境是否可以执行 `dsh`。
 ///
@@ -23,59 +27,40 @@ pub fn is_available() -> bool {
         .is_ok()
 }
 
-const CONNECT_TIMEOUT: Duration = Duration::from_millis(300);
-
 const START_TIMEOUT: Duration = Duration::from_secs(10);
 
 const POLL_INTERVAL: Duration = Duration::from_millis(200);
 
-/// 检查 127.0.0.1:3080 是否有程序监听.
-///
-/// 注意：
-///
-/// 这里只能证明端口已经被占用，
-/// 不能证明监听者一定是 DSH。
-pub fn port_is_open() -> bool {
-    let addr = SocketAddr::from(([127, 0, 0, 1], DSH_PORT));
-
-    TcpStream::connect_timeout(&addr, CONNECT_TIMEOUT).is_ok()
-}
-
-/// 启动 DSH Web。
-///
-/// 实际执行：
-///
-/// dsh web --no-open
-pub fn start() -> io::Result<Child> {
+pub fn start() -> io::Result<Server> {
     println!("Starting DSH Web...");
 
-    let mut child = Command::new("dsh").args(["web", "--no-open"]).spawn()?;
+    let mut child = Command::new("dsh")
+        .args(["web", "--port", "0"])
+        .stdout(Stdio::piped())
+        .spawn()?;
+    let stdout = child
+        .stdout
+        .take()
+        .ok_or_else(|| io::Error::other("DSH Web stdout is unavailable"))?;
+    let (sender, receiver) = mpsc::channel();
+
+    thread::spawn(move || {
+        for line in BufReader::new(stdout).lines() {
+            if sender.send(line).is_err() {
+                break;
+            }
+        }
+    });
 
     let deadline = Instant::now() + START_TIMEOUT;
 
     loop {
-        //
-        // Web Server 已经可以连接。
-        //
-        if port_is_open() {
-            println!("DSH Web started at {DSH_URL}");
-
-            return Ok(child);
-        }
-
-        //
-        // 如果 DSH 自己提前退出，
-        // 不要继续等完整的 10 秒超时。
-        //
         if let Some(status) = child.try_wait()? {
             return Err(io::Error::other(format!(
                 "DSH Web exited before becoming ready: {status}"
             )));
         }
 
-        //
-        // 启动超时。
-        //
         if Instant::now() >= deadline {
             let _ = child.kill();
             let _ = child.wait();
@@ -85,8 +70,25 @@ pub fn start() -> io::Result<Child> {
             ));
         }
 
-        thread::sleep(POLL_INTERVAL);
+        match receiver.recv_timeout(POLL_INTERVAL) {
+            Ok(Ok(line)) => {
+                if let Some(url) = parse_dsh_url(&line) {
+                    println!("DSH Web started at {url}");
+                    return Ok(Server { child, url });
+                }
+            }
+            Ok(Err(error)) => return Err(error),
+            Err(mpsc::RecvTimeoutError::Timeout) => {}
+            Err(mpsc::RecvTimeoutError::Disconnected) => thread::sleep(POLL_INTERVAL),
+        }
     }
+}
+
+fn parse_dsh_url(line: &str) -> Option<Url> {
+    let url = line.strip_prefix("dsh web: ")?.trim().parse::<Url>().ok()?;
+
+    (url.scheme() == "http" && url.host_str() == Some("127.0.0.1") && url.port()? != 0)
+        .then_some(url)
 }
 
 /// 关闭由 DSH Desktop 启动的 DSH。

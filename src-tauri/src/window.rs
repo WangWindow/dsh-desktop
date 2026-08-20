@@ -1,6 +1,8 @@
 use std::io;
 
-use tauri::{AppHandle, Manager, WebviewWindowBuilder};
+use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
+
+pub struct DshUrl(pub tauri::Url);
 
 pub fn show_or_create_main(app: &AppHandle) -> tauri::Result<()> {
     //
@@ -17,18 +19,17 @@ pub fn show_or_create_main(app: &AppHandle) -> tauri::Result<()> {
     // 窗口已经被 destroy：
     // 从 tauri.conf.json 中找到 main 窗口配置。
     //
-    let window_config = app
+    let mut window_config = app
         .config()
         .app
         .windows
         .iter()
         .find(|window| window.label == "main")
+        .cloned()
         .ok_or_else(|| io::Error::other("main window configuration is missing"))?;
 
-    //
-    // 根据配置重新创建完整的 WebViewWindow。
-    //
-    let window = WebviewWindowBuilder::from_config(app, window_config)?.build()?;
+    window_config.url = WebviewUrl::External(app.state::<DshUrl>().0.clone());
+    let window = WebviewWindowBuilder::from_config(app, &window_config)?.build()?;
     window.show()?;
     window.set_focus()?;
 

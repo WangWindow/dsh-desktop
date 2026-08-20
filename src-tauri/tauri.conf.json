@@ -11,7 +11,6 @@
     "windows": [
       {
         "title": "dsh-desktop",
-        "url": "http://127.0.0.1:3080",
         "create": false,
         "width": 800,
         "height": 600

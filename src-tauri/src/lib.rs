@@ -7,6 +7,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+use tauri::Manager;
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -92,16 +93,11 @@ pub fn run() {
             }
 
             //
-            // 2. 启动 DSH，或者复用已经运行的 DSH Web。
+            // 2. 启动由当前应用管理的 DSH Web。
             //
-
-            if dsh::port_is_open() {
-                println!("DSH Web port is already in use");
-            } else {
-                let child = dsh::start()?;
-
-                *dsh_process_for_setup.lock().unwrap() = Some(child);
-            }
+            let server = dsh::start()?;
+            app.manage(window::DshUrl(server.url));
+            *dsh_process_for_setup.lock().unwrap() = Some(server.child);
 
             //
             // 3. 创建系统托盘
