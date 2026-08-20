@@ -23,7 +23,6 @@ strip = true        # Ensures debug symbols are removed.
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-sysinfo = "0.39.6"
 tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-dialog = "2"
 tauri-plugin-opener = "2"
