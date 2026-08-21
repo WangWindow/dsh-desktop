@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.1.4] - 2026-08-21
+
+### Fixed
+
+- hide Windows child console (985ae95)
+
+### Maintenance
+
+- v0.1.4 (7734889)
+
 ## [0.1.3] - 2026-08-21
 
 ### Fixed
