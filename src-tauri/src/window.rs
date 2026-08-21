@@ -1,6 +1,6 @@
 use std::io;
 
-use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder, webview::PageLoadEvent};
+use tauri::{AppHandle, Manager, WebviewUrl, WebviewWindowBuilder};
 
 pub struct DshUrl(pub tauri::Url);
 
@@ -29,19 +29,9 @@ pub fn show_or_create_main(app: &AppHandle) -> tauri::Result<()> {
         .ok_or_else(|| io::Error::other("main window configuration is missing"))?;
 
     window_config.url = WebviewUrl::External(app.state::<DshUrl>().0.clone());
-    WebviewWindowBuilder::from_config(app, &window_config)?
-        .visible(false)
-        .on_page_load(|window, payload| {
-            if payload.event() == PageLoadEvent::Finished {
-                if let Err(error) = window.show() {
-                    eprintln!("Failed to show main window: {error}");
-                }
-                if let Err(error) = window.set_focus() {
-                    eprintln!("Failed to focus main window: {error}");
-                }
-            }
-        })
-        .build()?;
+    let window = WebviewWindowBuilder::from_config(app, &window_config)?.build()?;
+    window.show()?;
+    window.set_focus()?;
 
     Ok(())
 }
