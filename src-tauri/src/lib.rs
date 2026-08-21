@@ -1,3 +1,4 @@
+mod drop;
 mod dsh;
 mod tray;
 mod window;
@@ -43,6 +44,13 @@ pub fn run() {
         //
         .on_window_event(|window, event| {
             if window.label() != "main" {
+                return;
+            }
+
+            if let tauri::WindowEvent::DragDrop(tauri::DragDropEvent::Drop { paths, .. }) = event {
+                if let Some(webview) = window.app_handle().get_webview_window("main") {
+                    drop::forward(&webview, paths);
+                }
                 return;
             }
 
