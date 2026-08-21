@@ -13,6 +13,7 @@
         "title": "dsh-desktop",
         "create": false,
         "visible": false,
+        "dragDropEnabled": false,
         "width": 800,
         "height": 600
       }
