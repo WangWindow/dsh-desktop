@@ -14,12 +14,29 @@ pub struct Server {
     pub url: Url,
 }
 
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
+
+#[cfg(windows)]
+fn dsh_command() -> Command {
+    use std::os::windows::process::CommandExt;
+
+    let mut command = Command::new("dsh");
+    command.creation_flags(CREATE_NO_WINDOW);
+    command
+}
+
+#[cfg(not(windows))]
+fn dsh_command() -> Command {
+    Command::new("dsh")
+}
+
 /// 检查当前桌面应用环境是否可以执行 `dsh`。
 ///
 /// 这里只验证命令能够被解析并启动，不要求 `--version` 返回成功，
 /// 这样可以兼容没有实现标准版本参数的 DSH 版本。
 pub fn is_available() -> bool {
-    Command::new("dsh")
+    dsh_command()
         .arg("--version")
         .stdout(Stdio::null())
         .stderr(Stdio::null())
@@ -34,7 +51,7 @@ const POLL_INTERVAL: Duration = Duration::from_millis(200);
 pub fn start() -> io::Result<Server> {
     println!("Starting DSH Web...");
 
-    let mut child = Command::new("dsh")
+    let mut child = dsh_command()
         .args(["web", "--no-open", "--port", "0"])
         .stdout(Stdio::piped())
         .spawn()?;
