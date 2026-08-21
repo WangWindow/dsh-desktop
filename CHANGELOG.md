@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.3] - 2026-08-21
+
+### Fixed
+
+- restore immediate display (f07076a)
+- forward images to DSH (99f6941)
+- enable DSH file drops (8b3999b)
+
+### Maintenance
+
+- v0.1.3 (ed2e53a)
+
 ## [0.1.2] - 2026-08-21
 
 ### Fixed
