@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.1.2] - 2026-08-21
+
+### Fixed
+
+- avoid startup white screen (328e8fd)
+- prevent browser auto-open (6e7dd54)
+
+### Maintenance
+
+- v0.1.2 (365d552)
+- trim runtime dependencies (9c8f3fa)
+- use tag as release title (96b2d6c)
+- remove unused sysinfo (e727ab3)
+- add project usage notes (4c9603b)
+
 ## [0.1.1] - 2026-08-20
 
 ### Fixed
