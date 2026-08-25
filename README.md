@@ -5,6 +5,8 @@ DSH Desktop 是一个基于 Tauri 的轻量桌面托盘壳，用于在桌面窗�
 > [!IMPORTANT]
 > 本项目不内置 `dsh`，也不会自动下载或更新它。使用前请先按照 [DeepSeek Harness 官方教程](https://deepseek.com/harness/) 安装命令行工具，并确保可以在终端执行 `dsh`。
 
+![界面演示](./assets/preview.png)
+
 ## 注意事项
 
 > [!NOTE]
