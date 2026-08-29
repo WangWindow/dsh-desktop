@@ -13,35 +13,17 @@ use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // Some(child):
-    //   DSH 是由当前应用启动的，我们负责它的生命周期。
-    //
-    // None:
-    //   当前没有我们管理的 DSH 进程。
     let dsh_process = Arc::new(Mutex::new(None::<Child>));
     let dsh_process_for_setup = Arc::clone(&dsh_process);
 
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
-        //
-        // 单实例。
-        //
-        // 用户再次启动程序时，不创建第二个实例，
-        // 而是显示已有窗口；如果窗口已经被销毁，则重新创建。
-        //
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
             if let Err(error) = window::show_or_create_main(app) {
                 eprintln!("Failed to show main window: {error}");
             }
         }))
-        //
-        // 主窗口点击 × 时，不退出整个程序。
-        //
-        // 我们不再使用 hide()，而是直接 destroy()。
-        // 这样下次显示时创建一个全新的 GTK/WebView 窗口，
-        // 避免 GNOME Wayland 下 hide -> show 后标题栏失效的问题。
-        //
         .on_window_event(|window, event| {
             if window.label() != "main" {
                 return;
@@ -49,7 +31,7 @@ pub fn run() {
 
             if let tauri::WindowEvent::DragDrop(tauri::DragDropEvent::Drop { paths, .. }) = event {
                 if let Some(webview) = window.app_handle().get_webview_window("main") {
-                    drop::forward(&webview, paths);
+                    drop::forward_dropped_files(&webview, paths);
                 }
                 return;
             }
@@ -63,12 +45,6 @@ pub fn run() {
             }
         })
         .setup(move |app| {
-            //
-            // 1. 检查 DSH 是否已安装。
-            //
-            // 没有 DSH 时不创建主窗口和托盘，避免用户只看到一个
-            // 无法加载的 WebView。
-            //
             if !dsh::is_available() {
                 let app_handle = app.handle().clone();
 
@@ -100,23 +76,11 @@ pub fn run() {
                 return Ok(());
             }
 
-            //
-            // 2. 启动由当前应用管理的 DSH Web。
-            //
             let server = dsh::start()?;
             app.manage(window::DshUrl(server.url));
             *dsh_process_for_setup.lock().unwrap() = Some(server.child);
 
-            //
-            // 3. 创建系统托盘
-            //
-
             tray::create_tray(app)?;
-
-            //
-            // 4. 创建主窗口
-            //
-
             window::show_or_create_main(app.handle())?;
 
             Ok(())
@@ -124,12 +88,7 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("error while building Tauri application");
 
-    //
-    // 即使最后一个窗口被 destroy，也不能退出应用。
-    //
-    // Tray -> Quit 使用 app.exit(0)，此时 code == Some(0)，
-    // 因此允许真正退出。
-    //
+    // Keep the tray process alive after the main window is destroyed.
     let exit_code = app.run_return(|_, event| {
         if let tauri::RunEvent::ExitRequested { api, code, .. } = event
             && code.is_none()
@@ -137,10 +96,6 @@ pub fn run() {
             api.prevent_exit();
         }
     });
-
-    //
-    // 应用真正退出之后，清理我们启动的 DSH。
-    //
 
     if let Some(mut child) = dsh_process.lock().unwrap().take() {
         dsh::stop(&mut child);

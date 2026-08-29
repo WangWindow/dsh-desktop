@@ -15,12 +15,10 @@ pub struct Server {
 }
 
 #[cfg(windows)]
-const CREATE_NO_WINDOW: u32 = 0x08000000;
-
-#[cfg(windows)]
 fn dsh_command() -> Command {
     use std::os::windows::process::CommandExt;
 
+    const CREATE_NO_WINDOW: u32 = 0x08000000;
     let mut command = Command::new("dsh");
     command.creation_flags(CREATE_NO_WINDOW);
     command
@@ -32,9 +30,6 @@ fn dsh_command() -> Command {
 }
 
 /// 检查当前桌面应用环境是否可以执行 `dsh`。
-///
-/// 这里只验证命令能够被解析并启动，不要求 `--version` 返回成功，
-/// 这样可以兼容没有实现标准版本参数的 DSH 版本。
 pub fn is_available() -> bool {
     dsh_command()
         .arg("--version")
@@ -45,7 +40,6 @@ pub fn is_available() -> bool {
 }
 
 const START_TIMEOUT: Duration = Duration::from_secs(10);
-
 const POLL_INTERVAL: Duration = Duration::from_millis(200);
 
 pub fn start() -> io::Result<Server> {
@@ -101,13 +95,6 @@ pub fn start() -> io::Result<Server> {
     }
 }
 
-fn parse_dsh_url(line: &str) -> Option<Url> {
-    let url = line.strip_prefix("dsh web: ")?.trim().parse::<Url>().ok()?;
-
-    (url.scheme() == "http" && url.host_str() == Some("127.0.0.1") && url.port()? != 0)
-        .then_some(url)
-}
-
 /// 关闭由 DSH Desktop 启动的 DSH。
 pub fn stop(child: &mut Child) {
     println!("Stopping DSH Web...");
@@ -119,4 +106,12 @@ pub fn stop(child: &mut Child) {
     if let Err(error) = child.wait() {
         eprintln!("Failed to wait for DSH Web: {error}");
     }
+}
+
+/// 解析 DSH Web 输出的 URL。
+fn parse_dsh_url(line: &str) -> Option<Url> {
+    let url = line.strip_prefix("dsh web: ")?.trim().parse::<Url>().ok()?;
+
+    (url.scheme() == "http" && url.host_str() == Some("127.0.0.1") && url.port()? != 0)
+        .then_some(url)
 }
