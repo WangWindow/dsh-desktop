@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.1.5] - 2026-09-12
+
+### Added
+
+- route webview file chooser through xdg-portal (c4f5512)
+- simplify code (438d663)
+
+### Maintenance
+
+- update tauri app version to v0.1.5 (37b3fec)
+- add preview picture. (d89b85a)
+
 ## [0.1.4] - 2026-08-21
 
 ### Fixed
