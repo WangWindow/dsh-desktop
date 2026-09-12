@@ -13,6 +13,13 @@ use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // GtkFileChooserNative 依赖此变量决定是否走 xdg-desktop-portal 文件选择器
+    // （portal 不可用时 GTK 自动回退本地对话框）；必须早于 GTK 初始化设置，故 unsafe 安全。
+    #[cfg(target_os = "linux")]
+    unsafe {
+        std::env::set_var("GTK_USE_PORTAL", "1");
+    }
+
     let dsh_process = Arc::new(Mutex::new(None::<Child>));
     let dsh_process_for_setup = Arc::clone(&dsh_process);
 
