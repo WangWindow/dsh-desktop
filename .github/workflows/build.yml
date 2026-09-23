@@ -52,6 +52,48 @@ jobs:
           path: src-tauri/target/release/bundle/deb/*.deb
           if-no-files-found: error
 
+  build-deb-arm64:
+    name: Build Linux ARM64 DEB package
+    runs-on: ubuntu-24.04-arm
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build artifacts
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: ./src-tauri -> target
+
+      - name: Install JavaScript dependencies
+        run: bun install
+
+      - name: Build Debian package
+        run: bun tauri build --ci --bundles deb
+
+      - name: Upload Debian package
+        uses: actions/upload-artifact@v4
+        with:
+          name: dsh-desktop-linux-arm64-deb
+          path: src-tauri/target/release/bundle/deb/*.deb
+          if-no-files-found: error
+
   build-pacman:
     name: Build Arch Linux pacman package
     runs-on: ubuntu-22.04
@@ -148,6 +190,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     needs:
       - build-deb
+      - build-deb-arm64
       - build-pacman
       - build-windows
     runs-on: ubuntu-latest
